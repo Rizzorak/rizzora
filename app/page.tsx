@@ -156,7 +156,7 @@ function Radar({ engagement }: { engagement: Result["engagement"] }) {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">
-            Rizz Radar
+            Rizzora Radar
           </p>
 
           <p className={`mt-1 text-sm font-semibold ${textColor}`}>
@@ -291,7 +291,7 @@ export default function Home() {
               </div>
 
               <h1 className="text-xl font-black tracking-tight sm:text-2xl">
-                RIZZKE
+                RIZZORA
               </h1>
             </div>
 
@@ -352,7 +352,7 @@ export default function Home() {
                         </p>
 
                         <p className="mt-1 max-w-sm text-sm leading-5 text-white/35">
-                          Give RIZZKE the visual context and it&apos;ll
+                          Give RIZZORA the visual context and it&apos;ll
                           figure out what to say.
                         </p>
                       </div>
@@ -395,7 +395,7 @@ Them: haha maybe`}
                 <div className="border-t border-white/5 px-4 py-2.5">
                   <p className="text-xs text-white/25">
                     Tip: include a few messages before their latest reply so
-                    RIZZKE understands the context.
+                    RIZZORA understands the context.
                   </p>
                 </div>
               </div>
@@ -484,7 +484,7 @@ Them: haha maybe`}
             {loading ? (
               <span className="flex items-center justify-center gap-3">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                RIZZKE IS COOKING...
+                RIZZORA IS COOKING...
               </span>
             ) : (
               "🔥 Generate Rizz"
@@ -626,7 +626,7 @@ Them: haha maybe`}
         )}
 
         <footer className="mt-8 text-center text-xs text-white/20">
-          RIZZKE helps you sound natural — not like a pickup-line generator.
+          RIZZORA helps you sound natural — not like a pickup-line generator.
         </footer>
       </div>
     </main>

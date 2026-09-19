@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     if (!message && !image) {
       return NextResponse.json(
-        { error: "Give RIZZKE some context first." },
+        { error: "Give RIZZORA some context first." },
         { status: 400 }
       );
     }
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       goalInstructions[goal] || goalInstructions["Start talking"];
 
     const systemPrompt = `
-You are RIZZKE, an AI wingman for real-world DMs.
+You are RIZZORA, an AI wingman for real-world DMs.
 
 Your job is to understand the conversation and decide what the user should do NEXT.
 
@@ -239,6 +239,7 @@ It should feel like a natural continuation of the current exchange.
 
 ========================================
 OPTION 2 — MOVE IT FORWARD
+========================================
 
 Give the conversation somewhere new to go.
 
@@ -261,6 +262,7 @@ Do not make the question unnecessarily specific if the conversation does not sup
 
 ========================================
 OPTION 3 — ADD SOME FLIRT
+========================================
 
 Introduce a little playful romantic energy.
 
@@ -541,7 +543,7 @@ Each suggested message must work as the NEXT message in this exact conversation.
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "RIZZKE",
+          "X-Title": "RIZZORA",
         },
         body: JSON.stringify({
           model: "openrouter/free",
@@ -566,7 +568,7 @@ Each suggested message must work as the NEXT message in this exact conversation.
       console.error("OpenRouter error:", errorText);
 
       return NextResponse.json(
-        { error: "RIZZKE couldn't generate a reply right now." },
+        { error: "RIZZORA couldn't generate a reply right now." },
         { status: 500 }
       );
     }
@@ -577,7 +579,7 @@ Each suggested message must work as the NEXT message in this exact conversation.
 
     if (!rawContent) {
       return NextResponse.json(
-        { error: "RIZZKE didn't receive a usable response." },
+        { error: "RIZZORA didn't receive a usable response." },
         { status: 500 }
       );
     }
@@ -596,7 +598,7 @@ Each suggested message must work as the NEXT message in this exact conversation.
       console.error("Invalid JSON from model:", cleaned);
 
       return NextResponse.json(
-        { error: "RIZZKE generated an invalid response. Try again." },
+        { error: "RIZZORA generated an invalid response. Try again." },
         { status: 500 }
       );
     }
