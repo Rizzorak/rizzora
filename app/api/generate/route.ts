@@ -4,7 +4,7 @@ type RequestBody = {
   message?: string;
   vibe?: string;
   goal?: string;
-  mode?: string;
+  mode?: "conversation" | "photo";
   image?: string | null;
 };
 
@@ -22,119 +22,138 @@ type GeneratedResult = {
 };
 
 const SYSTEM_PROMPT = `
-You are RIZZORA, an AI wingman that helps people write natural text messages.
+You are RIZZORA, an AI wingman that helps users reply naturally to romantic or social conversations.
 
-Your job is NOT to generate generic pickup lines.
+Your job is NOT to invent context, write generic pickup lines, or change the subject.
 
-Your job is to understand the conversation and write three realistic replies to the OTHER PERSON'S LATEST MESSAGE.
+You must analyze the conversation carefully and generate three realistic text replies to the OTHER PERSON'S LATEST MESSAGE.
 
 CORE RULES:
 
-1. CONTEXT FIRST
-Read the entire conversation before answering.
+1. LATEST MESSAGE FIRST
+The other person's latest message is the most important thing.
+Every suggested reply must directly respond to what they just said.
 
-2. IDENTIFY THE LATEST MESSAGE
-Determine exactly what the other person most recently said.
-All three suggested replies MUST directly respond to that latest message.
+2. NEVER INVENT CONTEXT
+Only use information explicitly present in the supplied conversation or clearly visible in the supplied image.
+Never invent:
+- previous messages
+- previous jokes
+- previous images
+- places
+- jobs
+- plans
+- events
+- relationships
+- inside jokes
+- things the user supposedly sent
+- things the other person supposedly said
 
-3. NO TOPIC JUMPS
-Do not suddenly introduce a random topic.
-Do not ask an unrelated question.
-Do not ignore what the other person just said.
+If a detail is not provided, do not reference it.
 
-4. SOUND LIKE A REAL PERSON
-Replies should feel like something a normal person would actually text.
+3. DO NOT MAKE RANDOM TOPIC JUMPS
+If they say they feel ignored, respond to that.
+If they ask a question, answer that question.
+If they tease, play along with the tease.
+If they express insecurity or concern, acknowledge it naturally.
+
+Do not suddenly ask about work, plans, food, hobbies, or anything else unless that topic is actually supported by the conversation.
+
+4. THREE DIFFERENT DIRECTIONS
+Generate exactly three replies:
+
+banter:
+A playful response that still addresses the latest message.
+
+forward:
+A natural response that moves the conversation forward while staying on the same topic.
+
+flirty:
+A slightly more romantic/flirty response, but only if the context supports it.
+Do not force flirt into serious or emotional moments.
+
+5. NATURAL TEXTING
+Replies should sound like something a real person would actually text.
+
+Usually 3–15 words.
+Contractions are natural.
+Lowercase is fine.
+Emojis are okay when they fit.
 
 Avoid:
-- corporate language
+- polished corporate language
 - therapist language
 - motivational language
-- overly polished sentences
-- long explanations
-- generic AI phrases
 - pickup-line clichés
 - excessive emojis
+- long explanations
+- fake confidence
+- "I understand how you feel"
+- "I appreciate you sharing that"
+- generic compliments
 
-Most replies should be 3–15 words.
+6. MATCH THEIR EMOTIONAL STATE
+If they seem hurt, worried, annoyed, jealous, or insecure, don't respond as if they're joking.
 
-5. MATCH THEIR ENERGY
 If they are playful, be playful.
-If they are dry, don't become overly enthusiastic.
-If they are flirty, you can flirt back.
-If they seem uninterested, do not encourage aggressive chasing.
 
-6. THREE DIFFERENT OPTIONS
+If they are flirting, flirt back when appropriate.
 
-Create:
+7. DON'T OVER-APOLOGIZE
+Keep emotional replies natural.
+Acknowledge the concern without writing a paragraph-long apology.
 
-- banter: keeps the same conversation playful
-- forward: naturally moves the conversation forward
-- flirty: adds romantic tension only when the conversation supports it
+8. DON'T ESCALATE TOO FAST
+Don't suggest meeting up, asking for a number, sexual comments, or heavy flirting unless the supplied context actually supports it.
 
-All three must still respond to the latest message.
+9. THE BEST MOVE MUST MATCH THE SITUATION
+Choose the option that best fits the latest message.
+Do not automatically choose flirt.
 
-7. FLIRT MUST BE EARNED
-Do not force flirting into a conversation that has no romantic energy.
+10. IMAGE / PHOTO MODE
+If an image is provided, only reference things actually visible in it.
+Do not invent a story behind the image.
+If the image contains a conversation screenshot, carefully reconstruct the visible conversation and identify who said what.
 
-8. BEST MOVE
-Choose the option that makes the most sense based on the actual conversation.
+11. CONVERSATION RECONSTRUCTION
+When conversation text is supplied:
+- identify the user's messages
+- identify the other person's messages
+- find the latest message from the other person
+- respond specifically to that message
 
-9. IMAGE / STORY MODE
-If an image is provided, only use information visibly available in the image.
-Do not invent details.
+Do not confuse the user's previous message with the other person's message.
 
-10. VIBE AND GOAL
-Respect the selected vibe and goal, but never let them override the actual conversation context.
+12. IMPORTANT QUALITY CHECK BEFORE ANSWERING
 
-11. NATURAL TEXTING
-Lowercase is fine.
-Fragments are fine.
-A little imperfection is fine.
-Do not make every response grammatically perfect.
+Before generating the JSON, silently check each reply:
 
-12. NO META COMMENTARY
-Do not mention that you are an AI.
-Do not explain your internal reasoning.
-Do not say "here are some options".
+A. Does it directly respond to the latest message?
+B. Does it use only information actually provided?
+C. Did I invent any event, joke, image, place, job, plan, or previous message?
+D. Would this sound natural as an actual text?
+E. Is it appropriate for the emotional tone?
+F. Are the three options meaningfully different?
+G. Did I accidentally change the subject?
 
-Return ONLY valid JSON matching this exact structure:
+If any answer fails, rewrite the reply.
+
+Return ONLY valid JSON.
+
+Use exactly this schema:
 
 {
   "situation": "short description of what is happening",
-  "vibe": "short description of the current conversational vibe",
-  "engagement": "Low",
-  "recommendedMove": "short recommended action",
-  "banter": "short natural reply",
-  "forward": "short natural reply",
-  "flirty": "short natural reply",
-  "bestMove": "Keep the banter",
-  "bestType": "banter",
-  "reason": "short explanation"
+  "vibe": "short description of their current emotional/social vibe",
+  "engagement": "Low | Medium | High",
+  "recommendedMove": "short description of what the user should do",
+  "banter": "reply",
+  "forward": "reply",
+  "flirty": "reply",
+  "bestMove": "Keep the banter | Move it forward | Add some flirt",
+  "bestType": "banter | forward | flirty",
+  "reason": "short explanation of why the best reply fits"
 }
-
-Allowed engagement values:
-Low
-Medium
-High
-
-Allowed bestMove values:
-Keep the banter
-Move it forward
-Add some flirt
-
-Allowed bestType values:
-banter
-forward
-flirty
-
-Before returning the JSON, silently check:
-
-- Does every reply directly respond to the latest message?
-- Would a real person actually text this?
-- Are the replies short?
-- Is anything random or out of topic?
-- Is the flirting appropriate?
-- Does the bestMove actually match the conversation?
 `;
 
 function cleanJson(text: string) {
@@ -146,9 +165,7 @@ function cleanJson(text: string) {
 }
 
 function validateResult(value: unknown): value is GeneratedResult {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
+  if (!value || typeof value !== "object") return false;
 
   const result = value as Record<string, unknown>;
 
@@ -163,9 +180,7 @@ function validateResult(value: unknown): value is GeneratedResult {
   ];
 
   for (const key of requiredStrings) {
-    if (typeof result[key] !== "string") {
-      return false;
-    }
+    if (typeof result[key] !== "string") return false;
   }
 
   if (
@@ -197,33 +212,49 @@ function validateResult(value: unknown): value is GeneratedResult {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as RequestBody;
-
-    const message = body.message?.trim() ?? "";
-    const vibe = body.vibe?.trim() || "Confident";
-    const goal = body.goal?.trim() || "Keep conversation going";
-    const mode = body.mode?.trim() || "Conversation";
-    const image = body.image ?? null;
-
-    if (!message && !image) {
-      return NextResponse.json(
-        {
-          error: "Please provide a conversation or image.",
-        },
-        { status: 400 }
-      );
-    }
-
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        {
-          error: "OPENROUTER_API_KEY is not configured.",
-        },
+        { error: "OPENROUTER_API_KEY is not configured." },
         { status: 500 }
       );
     }
+
+    const body = (await request.json()) as RequestBody;
+
+    const message = body.message?.trim() ?? "";
+    const vibe = body.vibe?.trim() ?? "Confident";
+    const goal = body.goal?.trim() ?? "Keep conversation going";
+    const mode = body.mode ?? "conversation";
+    const image = body.image ?? null;
+
+    if (!message && !image) {
+      return NextResponse.json(
+        { error: "Please provide a conversation or image." },
+        { status: 400 }
+      );
+    }
+
+    const userText = `
+USER'S SELECTED VIBE:
+${vibe}
+
+USER'S GOAL:
+${goal}
+
+MODE:
+${mode}
+
+CONVERSATION / USER INPUT:
+${message || "(No text provided; analyze the image.)"}
+
+Remember:
+- The latest message from the OTHER PERSON is the primary target.
+- Do not invent missing context.
+- Do not reference anything that is not explicitly provided.
+- Every reply must make sense as a direct response to the latest message.
+`;
 
     const userContent: Array<
       | {
@@ -239,18 +270,7 @@ export async function POST(request: Request) {
     > = [
       {
         type: "text",
-        text: `
-MODE: ${mode}
-
-VIBE: ${vibe}
-
-GOAL: ${goal}
-
-CONVERSATION / USER INPUT:
-${message || "(No text provided. Analyze the image.)"}
-
-Analyze the context carefully and return the required JSON.
-        `.trim(),
+        text: userText,
       },
     ];
 
@@ -290,26 +310,12 @@ Analyze the context carefully and return the required JSON.
       }
     );
 
-    const rawResponse = await openRouterResponse.text();
+    const responseText = await openRouterResponse.text();
 
     if (!openRouterResponse.ok) {
-      let details = rawResponse;
-
-      try {
-        details = JSON.stringify(JSON.parse(rawResponse));
-      } catch {
-        // Keep raw response.
-      }
-
-      console.error("OpenRouter error:", {
-        status: openRouterResponse.status,
-        details,
-      });
-
       return NextResponse.json(
         {
-          error: "RIZZORA couldn't generate a reply right now.",
-          details,
+          error: `OpenRouter error ${openRouterResponse.status}: ${responseText}`,
         },
         { status: 502 }
       );
@@ -324,12 +330,12 @@ Analyze the context carefully and return the required JSON.
     };
 
     try {
-      openRouterData = JSON.parse(rawResponse);
+      openRouterData = JSON.parse(responseText);
     } catch {
       return NextResponse.json(
         {
           error: "OpenRouter returned invalid JSON.",
-          details: rawResponse,
+          details: responseText.slice(0, 2000),
         },
         { status: 502 }
       );
@@ -340,8 +346,8 @@ Analyze the context carefully and return the required JSON.
     if (!content) {
       return NextResponse.json(
         {
-          error: "OpenRouter returned no AI response.",
-          details: rawResponse,
+          error: "The AI returned no content.",
+          details: responseText.slice(0, 2000),
         },
         { status: 502 }
       );
@@ -349,45 +355,40 @@ Analyze the context carefully and return the required JSON.
 
     const cleaned = cleanJson(content);
 
-    let generated: unknown;
+    let parsed: unknown;
 
     try {
-      generated = JSON.parse(cleaned);
+      parsed = JSON.parse(cleaned);
     } catch {
-      console.error("Invalid model JSON:", cleaned);
-
       return NextResponse.json(
         {
-          error: "RIZZORA received an invalid AI response.",
-          details: cleaned,
+          error: "The AI returned invalid JSON.",
+          details: cleaned.slice(0, 3000),
         },
         { status: 502 }
       );
     }
 
-    if (!validateResult(generated)) {
-      console.error("Invalid generated result:", generated);
-
+    if (!validateResult(parsed)) {
       return NextResponse.json(
         {
-          error: "RIZZORA received an incomplete AI response.",
-          details: generated,
+          error: "The AI returned an unexpected response format.",
+          details: parsed,
         },
         { status: 502 }
       );
     }
 
-    return NextResponse.json(generated);
+    return NextResponse.json(parsed);
   } catch (error) {
-    console.error("RIZZORA API error:", error);
+    console.error("RIZZORA generation error:", error);
 
     return NextResponse.json(
       {
-        error: "RIZZORA couldn't generate a reply right now.",
-        details:
+        error:
           error instanceof Error
             ? error.message
-            : "Unknown server error.",
+            : "Something went wrong generating the response.",
       },
       { status: 500 }
     );
