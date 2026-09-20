@@ -261,8 +261,9 @@ GOAL: ${goal}
 USER TEXT:
 ${message || "(No text provided.)"}
 
-${image
-  ? `
+${
+  image
+    ? `
 IMPORTANT IMAGE TASK:
 Carefully inspect the attached image before generating the answer.
 
@@ -274,7 +275,7 @@ identify the most obvious visible subject or context and make the replies releva
 
 Do not invent anything that is not visible.
 `
-  : ""}
+    : ""}
       `.trim(),
     });
 
@@ -287,9 +288,7 @@ Do not invent anything that is not visible.
       });
     }
 
-    const model = image
-      ? "google/gemma-4-26b-a4b-it:free"
-      : "openrouter/free";
+    const model = "nvidia/nemotron-3-nano-omni:free";
 
     const openRouterResponse = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
