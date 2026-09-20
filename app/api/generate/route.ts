@@ -1,466 +1,215 @@
-````typescript
 import { NextResponse } from "next/server";
 
 type RequestBody = {
   message?: string;
   vibe?: string;
   goal?: string;
-  mode?: string;
-  image?: string;
+  mode?: "Conversation" | "Photo" | "Story";
+  image?: string | null;
 };
+
+type GeneratedResult = {
+  situation: string;
+  vibe: string;
+  engagement: "Low" | "Medium" | "High";
+  recommendedMove: string;
+  banter: string;
+  forward: string;
+  flirty: string;
+  bestMove: string;
+  bestType: "Keep the banter" | "Move it forward" | "Add some flirt";
+  reason: string;
+};
+
+const SYSTEM_PROMPT = `
+You are RIZZORA, an AI wingman that helps people write natural text messages.
+
+Your job is NOT to generate pickup lines.
+Your job is to understand the actual conversation and suggest realistic messages someone would genuinely send.
+
+CORE RULE:
+Context comes first.
+
+For conversation mode:
+1. Reconstruct the conversation.
+2. Identify who is the user and who is the other person.
+3. Identify the EXACT latest message from the other person.
+4. Understand what that latest message means in context.
+5. Respond directly to that latest message.
+6. Never randomly introduce an unrelated topic.
+7. Do not repeat questions that were already answered.
+8. Do not ignore the latest message.
+
+The three replies must all make sense as direct responses to the latest message.
+
+TEXTING STYLE:
+- Sound like a real person texting.
+- Keep replies short.
+- Usually 3-15 words.
+- Use lowercase when natural.
+- Contractions are good.
+- Emojis are okay, but don't overuse them.
+- Avoid corporate, polished, formal, or overly clever language.
+- Avoid generic AI phrases.
+- Avoid motivational language.
+- Avoid "that's interesting", "tell me more", "I love that", and similar generic filler.
+- Avoid pickup-line energy.
+- Do not make every message flirty.
+- Do not force jokes.
+- Do not use long explanations in the suggested replies.
+
+VIBE:
+Respect the selected vibe:
+- Confident
+- Funny
+- Charming
+- Flirty
+- Teasing
+- Chill
+
+GOAL:
+Use the selected goal as a direction, not an excuse to force the conversation.
+
+ENGAGEMENT:
+Estimate engagement from the conversation:
+- Low: very short replies, repeated delays/avoidance, little effort, clear disinterest.
+- Medium: responsive but not strongly investing.
+- High: playful, curious, detailed, initiating, teasing, or clearly investing.
+
+If engagement is low:
+- Do not tell the user to chase harder.
+- Keep the suggested reply light and respectful.
+- It is okay to suggest giving the other person space.
+
+If engagement is medium:
+- Keep momentum naturally.
+- Build from what they actually said.
+
+If engagement is high:
+- The response can be more playful, personal, teasing, or flirty.
+
+FLIRT:
+Only use the flirty option when the conversation supports it.
+Do not turn every conversation sexual or romantic.
+Flirting should feel earned by the existing interaction.
+
+THREE OPTIONS:
+Return exactly three options:
+1. banter = Keep the banter
+2. forward = Move it forward
+3. flirty = Add some flirt
+
+Each option must be a direct response to the latest message.
+They should feel meaningfully different while staying on the same topic.
+
+BEST MOVE:
+Choose which of the three options naturally fits the current conversation best.
+
+PHOTO / STORY MODE:
+If an image is provided:
+- Analyze only what is visibly present.
+- Do not invent details.
+- If text appears in the image, use it.
+- If the image shows a person, place, food, outfit, activity, etc., use the visible context naturally.
+- Do not claim to know hidden context.
+- Suggestions should reference something actually visible when appropriate.
+
+QUALITY CHECK BEFORE RETURNING:
+- Does each reply directly respond to the latest message?
+- Does each reply sound like something a normal person would text?
+- Are the replies concise?
+- Did you avoid changing topics randomly?
+- Did you avoid generic AI language?
+- Did you avoid unnecessary pickup-line energy?
+- Is the flirty option appropriate for the actual context?
+- Is the best move genuinely based on the conversation?
+
+Return ONLY valid JSON matching this exact structure:
+
+{
+  "situation": "short explanation of what is happening",
+  "vibe": "short description of the current conversational vibe",
+  "engagement": "Low | Medium | High",
+  "recommendedMove": "short recommendation",
+  "banter": "reply option",
+  "forward": "reply option",
+  "flirty": "reply option",
+  "bestMove": "exact reply selected as best",
+  "bestType": "Keep the banter | Move it forward | Add some flirt",
+  "reason": "short explanation of why this is the best move"
+}
+
+Do not include markdown.
+Do not include code fences.
+Do not include any text outside the JSON.
+`;
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RequestBody;
 
     const message = body.message?.trim() ?? "";
-    const vibe = body.vibe?.trim() ?? "Confident";
-    const goal = body.goal?.trim() ?? "Keep the conversation going";
-    const mode = body.mode?.trim() ?? "Conversation";
-    const image = body.image?.trim() ?? "";
+    const vibe = body.vibe?.trim() ?? "Chill";
+    const goal = body.goal?.trim() ?? "Keep conversation going";
+    const mode = body.mode ?? "Conversation";
+    const image = body.image ?? null;
 
     if (!message && !image) {
       return NextResponse.json(
-        { error: "Give RIZZORA some context first." },
+        { error: "Please add a conversation or image first." },
         { status: 400 }
       );
+    }
+
+    const userPrompt = `
+MODE: ${mode}
+
+SELECTED VIBE: ${vibe}
+
+GOAL: ${goal}
+
+USER INPUT:
+${message || "(No text provided. Analyze the uploaded image.)"}
+
+Generate the RIZZORA response now.
+`;
+
+    const content: Array<
+      | {
+          type: "text";
+          text: string;
+        }
+      | {
+          type: "image_url";
+          image_url: {
+            url: string;
+          };
+        }
+    > = [
+      {
+        type: "text",
+        text: userPrompt,
+      },
+    ];
+
+    if (image) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: image,
+        },
+      });
     }
 
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "RIZZORA is missing its API configuration." },
+        {
+          error: "OPENROUTER_API_KEY is not configured.",
+        },
         { status: 500 }
       );
-    }
-
-    const systemPrompt = `
-You are RIZZORA, an AI wingman that helps someone write their next text.
-
-Your job is NOT to give dating advice.
-
-Your job is to understand the actual conversation and produce short replies that could realistically be sent as the very next message.
-
-The conversation is the source of truth.
-
-========================
-CORE RULE
-========================
-
-CONTEXT FIRST.
-
-Before generating replies, reconstruct the conversation internally.
-
-Identify:
-
-1. Which messages belong to the user.
-2. Which messages belong to the other person.
-3. The most recent message from the other person.
-4. The topic of that message.
-5. What the other person is actually communicating.
-6. What a normal person would naturally say immediately after it.
-
-The latest message from the other person is the PRIMARY anchor.
-
-Previous messages exist only to explain the latest message.
-
-Never let an older topic override the latest message.
-
-========================
-CONVERSATION RECONSTRUCTION
-========================
-
-If the user provides a transcript, carefully infer speaker turns from labels such as:
-
-You:
-Me:
-Them:
-Her:
-Him:
-Other:
-User:
-
-If labels are present, respect them.
-
-If labels are not obvious, infer the speaker turns from the structure and context.
-
-Do not invent messages that are not present.
-
-Do not assume the gender of anyone unless explicitly stated.
-
-Internally reconstruct the conversation before writing the replies.
-
-Do not output the reconstruction.
-
-========================
-LATEST MESSAGE
-========================
-
-Find the exact latest message from the OTHER PERSON.
-
-Internally complete:
-
-"Their latest message is: ______"
-
-Then:
-
-"They are responding to: ______"
-
-Then:
-
-"A natural immediate response would: ______"
-
-Every generated reply must directly follow that message.
-
-Imagine the conversation is only:
-
-THEIR LAST MESSAGE
-↓
-YOUR REPLY
-
-If your reply would feel strange immediately after their last message, reject it and write another one.
-
-========================
-MESSAGE INTENT
-========================
-
-Understand what the latest message is doing.
-
-Possible intents:
-
-- answering a question
-- asking a question
-- telling a story
-- making a joke
-- teasing
-- complimenting
-- reacting
-- agreeing
-- disagreeing
-- inviting
-- declining
-- showing interest
-- showing low effort
-- ending the conversation
-- unclear
-
-Respond to the actual intent.
-
-Examples:
-
-If they answer a question:
-React to their answer.
-
-If they ask a question:
-Answer the question or play with it.
-
-If they tease:
-Tease back.
-
-If they make a joke:
-Continue that joke.
-
-If they tell a story:
-React to something specific in the story.
-
-If they compliment:
-Receive it naturally.
-
-If they say something short like "haha", "yeah", or "thanks":
-Do not invent a completely new conversation.
-
-If they appear to end the conversation:
-Do not manufacture a reason to keep chasing.
-
-========================
-NO TOPIC JUMPS
-========================
-
-Do NOT introduce a new topic unless the latest message naturally creates an opening for it.
-
-Stay connected to what they just said.
-
-========================
-NO GENERIC AI RESPONSES
-========================
-
-Never use generic filler such as:
-
-"That sounds interesting."
-
-"Tell me more."
-
-"I'd love to hear more."
-
-"That sounds fun."
-
-"What was your favorite part?"
-
-"That must have been..."
-
-"I completely understand."
-
-"That's nice."
-
-"Interesting."
-
-unless those words genuinely fit the exact conversation.
-
-Never sound like a customer-service chatbot.
-
-Never sound like a therapist.
-
-Never sound like a dating coach.
-
-Never explain the conversation inside the actual reply.
-
-========================
-REAL TEXTING
-========================
-
-Write like an actual person texting.
-
-Usually:
-
-3–15 words.
-
-Sometimes shorter.
-
-One sentence is usually enough.
-
-Do not write paragraphs.
-
-Do not make every message clever.
-
-Do not make every message flirty.
-
-Do not force a question.
-
-Do not force an emoji.
-
-Do not force slang.
-
-Do not overuse:
-
-😂
-😭
-😏
-haha
-lol
-lmao
-
-Use them only when they genuinely fit the conversation.
-
-Natural > clever.
-
-Relevant > impressive.
-
-Specific > generic.
-
-========================
-THREE OPTIONS
-========================
-
-Generate exactly three replies to the SAME latest message.
-
-OPTION 1 — KEEP THE BANTER
-
-Continue the current energy naturally.
-
-OPTION 2 — MOVE IT FORWARD
-
-Develop the current topic by one small step.
-
-OPTION 3 — ADD SOME FLIRT
-
-Only use flirt if the existing conversation supports it.
-
-The three replies must be meaningfully different.
-
-They must NOT be three unrelated conversation starters.
-
-They must NOT change the subject.
-
-They must NOT all ask questions.
-
-They must NOT all be flirty.
-
-========================
-FLIRT RULE
-========================
-
-Flirting must be earned by the conversation.
-
-If there is no clear opening for flirting, keep it subtle.
-
-Do not suddenly introduce:
-
-dating
-meeting up
-asking for a number
-sexual comments
-heavy compliments
-
-unless the conversation naturally supports that step.
-
-========================
-ENGAGEMENT
-========================
-
-Judge engagement from the overall conversation.
-
-HIGH:
-
-They ask questions, provide details, joke, tease, initiate topics, or consistently contribute.
-
-MEDIUM:
-
-They participate but their investment is mixed.
-
-LOW:
-
-They repeatedly give minimal replies, avoid continuing topics, ignore questions, or repeatedly close conversations.
-
-Do not interpret "haha", "lol", emojis, or "thanks" alone as romantic interest.
-
-If engagement is LOW:
-
-Do not tell the user to chase harder.
-
-Do not manufacture attraction.
-
-Do not force flirt.
-
-Sometimes the correct response is simple.
-
-Sometimes giving them space is appropriate.
-
-========================
-VIBE
-========================
-
-Selected vibe:
-
-${vibe}
-
-Use this only to change the tone of the reply.
-
-The vibe must NEVER override the actual conversation.
-
-========================
-GOAL
-========================
-
-Selected goal:
-
-${goal}
-
-The goal is secondary to the conversation.
-
-Never force the goal.
-
-If the natural next step is simply continuing the conversation, continue it.
-
-========================
-PHOTO / STORY MODE
-========================
-
-If an image is provided:
-
-Use only visible information.
-
-Do not invent:
-
-- relationships
-- locations
-- intentions
-- emotions
-- events
-- history
-- context
-
-Identify the most obvious conversation-worthy detail.
-
-Build replies around that detail.
-
-========================
-FINAL QUALITY CHECK
-========================
-
-Before returning the JSON, internally check every reply.
-
-CHECK 1:
-Does it directly respond to the latest message?
-
-CHECK 2:
-Would it make sense immediately after the latest message?
-
-CHECK 3:
-Did it accidentally respond to an older message?
-
-CHECK 4:
-Did it introduce an unrelated topic?
-
-CHECK 5:
-Did it invent information?
-
-CHECK 6:
-Does it sound like a real text?
-
-CHECK 7:
-Is it unnecessarily clever?
-
-CHECK 8:
-Is it unnecessarily flirty?
-
-CHECK 9:
-Would a real person actually send it?
-
-If any answer is wrong, rewrite the reply.
-
-========================
-OUTPUT
-========================
-
-Return ONLY valid JSON.
-
-{
-  "situation": "one short factual sentence describing what is happening",
-  "vibe": "${vibe}",
-  "engagement": "High, Medium, or Low",
-  "recommendedMove": "one short sentence describing the natural next move",
-  "banter": "short natural reply directly responding to their latest message",
-  "forward": "short natural reply directly responding to their latest message",
-  "flirty": "short natural reply directly responding to their latest message",
-  "bestMove": "the strongest natural reply",
-  "bestType": "Keep the banter, Move it forward, or Add some flirt",
-  "reason": "one short sentence explaining why the best reply fits"
-}
-
-Do not include markdown.
-Do not include code fences.
-Do not include anything outside the JSON.
-`;
-
-    const userText =
-      message ||
-      `Analyze this ${mode.toLowerCase()} and suggest natural replies.`;
-
-    const userContent: Array<Record<string, unknown>> = [
-      {
-        type: "text",
-        text: userText,
-      },
-    ];
-
-    if (image) {
-      userContent.push({
-        type: "image_url",
-        image_url: {
-          url: image,
-        },
-      });
     }
 
     const openRouterResponse = await fetch(
@@ -479,11 +228,11 @@ Do not include anything outside the JSON.
           messages: [
             {
               role: "system",
-              content: systemPrompt,
+              content: SYSTEM_PROMPT,
             },
             {
               role: "user",
-              content: userContent,
+              content,
             },
           ],
         }),
@@ -504,32 +253,42 @@ Do not include anything outside the JSON.
       );
     }
 
-    const openRouterData = await openRouterResponse.json();
+    const data = await openRouterResponse.json();
 
-    const content = openRouterData?.choices?.[0]?.message?.content;
+    const rawContent = data?.choices?.[0]?.message?.content;
 
-    if (!content || typeof content !== "string") {
+    if (!rawContent || typeof rawContent !== "string") {
+      console.error("Unexpected OpenRouter response:", data);
+
       return NextResponse.json(
-        { error: "RIZZORA didn't receive a usable response." },
+        {
+          error: "RIZZORA received an empty response from the AI.",
+        },
         { status: 502 }
       );
     }
 
-    const cleaned = content
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
+    let cleaned = rawContent.trim();
 
-    let result: Record<string, unknown>;
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+    }
+
+    let result: GeneratedResult;
 
     try {
-      result = JSON.parse(cleaned);
-    } catch {
+      result = JSON.parse(cleaned) as GeneratedResult;
+    } catch (error) {
+      console.error("JSON parse error:", error);
+      console.error("Raw model output:", rawContent);
+
       return NextResponse.json(
         {
-          error: "RIZZORA generated an invalid response.",
-          details: cleaned.slice(0, 1000),
+          error: "RIZZORA received an invalid response from the AI.",
+          details: rawContent,
         },
         { status: 502 }
       );
@@ -548,47 +307,21 @@ Do not include anything outside the JSON.
       "reason",
     ];
 
-    const missingField = requiredFields.find(
+    const missingFields = requiredFields.filter(
       (field) =>
-        typeof result[field] !== "string" ||
-        !(result[field] as string).trim()
+        !(field in result) ||
+        result[field as keyof GeneratedResult] === undefined ||
+        result[field as keyof GeneratedResult] === null
     );
 
-    if (missingField) {
-      return NextResponse.json(
-        {
-          error: "RIZZORA generated an incomplete response.",
-          details: `Missing field: ${missingField}`,
-        },
-        { status: 502 }
-      );
-    }
+    if (missingFields.length > 0) {
+      console.error("Missing response fields:", missingFields);
+      console.error("Parsed result:", result);
 
-    if (
-      !["High", "Medium", "Low"].includes(
-        result.engagement as string
-      )
-    ) {
       return NextResponse.json(
         {
-          error: "RIZZORA generated an invalid engagement level.",
-          details: String(result.engagement),
-        },
-        { status: 502 }
-      );
-    }
-
-    if (
-      ![
-        "Keep the banter",
-        "Move it forward",
-        "Add some flirt",
-      ].includes(result.bestType as string)
-    ) {
-      return NextResponse.json(
-        {
-          error: "RIZZORA generated an invalid recommendation.",
-          details: String(result.bestType),
+          error: "RIZZORA received an incomplete response from the AI.",
+          details: `Missing fields: ${missingFields.join(", ")}`,
         },
         { status: 502 }
       );
@@ -600,7 +333,7 @@ Do not include anything outside the JSON.
 
     return NextResponse.json(
       {
-        error: "RIZZORA couldn't generate a reply right now.",
+        error: "Something went wrong while generating your replies.",
         details:
           error instanceof Error ? error.message : "Unknown server error",
       },
@@ -608,4 +341,3 @@ Do not include anything outside the JSON.
     );
   }
 }
-````
