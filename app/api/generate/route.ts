@@ -44,6 +44,7 @@ Do not ignore what the other person just said.
 
 4. SOUND LIKE A REAL PERSON
 Replies should feel like something a normal person would actually text.
+
 Avoid:
 - corporate language
 - therapist language
@@ -63,7 +64,9 @@ If they are flirty, you can flirt back.
 If they seem uninterested, do not encourage aggressive chasing.
 
 6. THREE DIFFERENT OPTIONS
+
 Create:
+
 - banter: keeps the same conversation playful
 - forward: naturally moves the conversation forward
 - flirty: adds romantic tension only when the conversation supports it
@@ -233,11 +236,10 @@ export async function POST(request: Request) {
             url: string;
           };
         }
-    > = [];
-
-    userContent.push({
-      type: "text",
-      text: `
+    > = [
+      {
+        type: "text",
+        text: `
 MODE: ${mode}
 
 VIBE: ${vibe}
@@ -248,8 +250,9 @@ CONVERSATION / USER INPUT:
 ${message || "(No text provided. Analyze the image.)"}
 
 Analyze the context carefully and return the required JSON.
-      `.trim(),
-    });
+        `.trim(),
+      },
+    ];
 
     if (image) {
       userContent.push({
@@ -271,7 +274,7 @@ Analyze the context carefully and return the required JSON.
           "X-Title": "RIZZORA",
         },
         body: JSON.stringify({
-          model: "qwen/qwen3.8-27b:free",
+          model: "inclusionai/ling-3.0-flash-vl:free",
           temperature: 0.35,
           messages: [
             {
@@ -293,8 +296,7 @@ Analyze the context carefully and return the required JSON.
       let details = rawResponse;
 
       try {
-        const parsed = JSON.parse(rawResponse);
-        details = JSON.stringify(parsed);
+        details = JSON.stringify(JSON.parse(rawResponse));
       } catch {
         // Keep raw response.
       }
