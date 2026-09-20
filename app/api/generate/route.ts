@@ -4,7 +4,7 @@ type RequestBody = {
   message?: string;
   vibe?: string;
   goal?: string;
-  mode?: "Conversation" | "Photo" | "Story";
+  mode?: string;
   image?: string | null;
 };
 
@@ -16,189 +16,199 @@ type GeneratedResult = {
   banter: string;
   forward: string;
   flirty: string;
-  bestMove: string;
-  bestType: "Keep the banter" | "Move it forward" | "Add some flirt";
+  bestMove: "Keep the banter" | "Move it forward" | "Add some flirt";
+  bestType: "banter" | "forward" | "flirty";
   reason: string;
 };
 
 const SYSTEM_PROMPT = `
 You are RIZZORA, an AI wingman that helps people write natural text messages.
 
-Your job is NOT to generate pickup lines.
-Your job is to understand the actual conversation and suggest realistic messages someone would genuinely send.
+Your job is NOT to generate generic pickup lines.
 
-CORE RULE:
-Context comes first.
+Your job is to understand the conversation and write three realistic replies to the OTHER PERSON'S LATEST MESSAGE.
 
-For conversation mode:
-1. Reconstruct the conversation.
-2. Identify who is the user and who is the other person.
-3. Identify the EXACT latest message from the other person.
-4. Understand what that latest message means in context.
-5. Respond directly to that latest message.
-6. Never randomly introduce an unrelated topic.
-7. Do not repeat questions that were already answered.
-8. Do not ignore the latest message.
+CORE RULES:
 
-The three replies must all make sense as direct responses to the latest message.
+1. CONTEXT FIRST
+Read the entire conversation before answering.
 
-TEXTING STYLE:
-- Sound like a real person texting.
-- Keep replies short.
-- Usually 3-15 words.
-- Use lowercase when natural.
-- Contractions are good.
-- Emojis are okay, but don't overuse them.
-- Avoid corporate, polished, formal, or overly clever language.
-- Avoid generic AI phrases.
-- Avoid motivational language.
-- Avoid "that's interesting", "tell me more", "I love that", and similar generic filler.
-- Avoid pickup-line energy.
-- Do not make every message flirty.
-- Do not force jokes.
-- Do not use long explanations in the suggested replies.
+2. IDENTIFY THE LATEST MESSAGE
+Determine exactly what the other person most recently said.
+All three suggested replies MUST directly respond to that latest message.
 
-VIBE:
-Respect the selected vibe:
-- Confident
-- Funny
-- Charming
-- Flirty
-- Teasing
-- Chill
+3. NO TOPIC JUMPS
+Do not suddenly introduce a random topic.
+Do not ask an unrelated question.
+Do not ignore what the other person just said.
 
-GOAL:
-Use the selected goal as a direction, not an excuse to force the conversation.
+4. SOUND LIKE A REAL PERSON
+Replies should feel like something a normal person would actually text.
+Avoid:
+- corporate language
+- therapist language
+- motivational language
+- overly polished sentences
+- long explanations
+- generic AI phrases
+- pickup-line clichés
+- excessive emojis
 
-ENGAGEMENT:
-Estimate engagement from the conversation:
-- Low: very short replies, repeated delays/avoidance, little effort, clear disinterest.
-- Medium: responsive but not strongly investing.
-- High: playful, curious, detailed, initiating, teasing, or clearly investing.
+Most replies should be 3–15 words.
 
-If engagement is low:
-- Do not tell the user to chase harder.
-- Keep the suggested reply light and respectful.
-- It is okay to suggest giving the other person space.
+5. MATCH THEIR ENERGY
+If they are playful, be playful.
+If they are dry, don't become overly enthusiastic.
+If they are flirty, you can flirt back.
+If they seem uninterested, do not encourage aggressive chasing.
 
-If engagement is medium:
-- Keep momentum naturally.
-- Build from what they actually said.
+6. THREE DIFFERENT OPTIONS
+Create:
+- banter: keeps the same conversation playful
+- forward: naturally moves the conversation forward
+- flirty: adds romantic tension only when the conversation supports it
 
-If engagement is high:
-- The response can be more playful, personal, teasing, or flirty.
+All three must still respond to the latest message.
 
-FLIRT:
-Only use the flirty option when the conversation supports it.
-Do not turn every conversation sexual or romantic.
-Flirting should feel earned by the existing interaction.
+7. FLIRT MUST BE EARNED
+Do not force flirting into a conversation that has no romantic energy.
 
-THREE OPTIONS:
-Return exactly three options:
-1. banter = Keep the banter
-2. forward = Move it forward
-3. flirty = Add some flirt
+8. BEST MOVE
+Choose the option that makes the most sense based on the actual conversation.
 
-Each option must be a direct response to the latest message.
-They should feel meaningfully different while staying on the same topic.
+9. IMAGE / STORY MODE
+If an image is provided, only use information visibly available in the image.
+Do not invent details.
 
-BEST MOVE:
-Choose which of the three options naturally fits the current conversation best.
+10. VIBE AND GOAL
+Respect the selected vibe and goal, but never let them override the actual conversation context.
 
-PHOTO / STORY MODE:
-If an image is provided:
-- Analyze only what is visibly present.
-- Do not invent details.
-- If text appears in the image, use it.
-- If the image shows a person, place, food, outfit, activity, etc., use the visible context naturally.
-- Do not claim to know hidden context.
-- Suggestions should reference something actually visible when appropriate.
+11. NATURAL TEXTING
+Lowercase is fine.
+Fragments are fine.
+A little imperfection is fine.
+Do not make every response grammatically perfect.
 
-QUALITY CHECK BEFORE RETURNING:
-- Does each reply directly respond to the latest message?
-- Does each reply sound like something a normal person would text?
-- Are the replies concise?
-- Did you avoid changing topics randomly?
-- Did you avoid generic AI language?
-- Did you avoid unnecessary pickup-line energy?
-- Is the flirty option appropriate for the actual context?
-- Is the best move genuinely based on the conversation?
+12. NO META COMMENTARY
+Do not mention that you are an AI.
+Do not explain your internal reasoning.
+Do not say "here are some options".
 
 Return ONLY valid JSON matching this exact structure:
 
 {
-  "situation": "short explanation of what is happening",
+  "situation": "short description of what is happening",
   "vibe": "short description of the current conversational vibe",
-  "engagement": "Low | Medium | High",
-  "recommendedMove": "short recommendation",
-  "banter": "reply option",
-  "forward": "reply option",
-  "flirty": "reply option",
-  "bestMove": "exact reply selected as best",
-  "bestType": "Keep the banter | Move it forward | Add some flirt",
-  "reason": "short explanation of why this is the best move"
+  "engagement": "Low",
+  "recommendedMove": "short recommended action",
+  "banter": "short natural reply",
+  "forward": "short natural reply",
+  "flirty": "short natural reply",
+  "bestMove": "Keep the banter",
+  "bestType": "banter",
+  "reason": "short explanation"
 }
 
-Do not include markdown.
-Do not include code fences.
-Do not include any text outside the JSON.
+Allowed engagement values:
+Low
+Medium
+High
+
+Allowed bestMove values:
+Keep the banter
+Move it forward
+Add some flirt
+
+Allowed bestType values:
+banter
+forward
+flirty
+
+Before returning the JSON, silently check:
+
+- Does every reply directly respond to the latest message?
+- Would a real person actually text this?
+- Are the replies short?
+- Is anything random or out of topic?
+- Is the flirting appropriate?
+- Does the bestMove actually match the conversation?
 `;
+
+function cleanJson(text: string) {
+  return text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
+function validateResult(value: unknown): value is GeneratedResult {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const result = value as Record<string, unknown>;
+
+  const requiredStrings = [
+    "situation",
+    "vibe",
+    "recommendedMove",
+    "banter",
+    "forward",
+    "flirty",
+    "reason",
+  ];
+
+  for (const key of requiredStrings) {
+    if (typeof result[key] !== "string") {
+      return false;
+    }
+  }
+
+  if (
+    result.engagement !== "Low" &&
+    result.engagement !== "Medium" &&
+    result.engagement !== "High"
+  ) {
+    return false;
+  }
+
+  if (
+    result.bestMove !== "Keep the banter" &&
+    result.bestMove !== "Move it forward" &&
+    result.bestMove !== "Add some flirt"
+  ) {
+    return false;
+  }
+
+  if (
+    result.bestType !== "banter" &&
+    result.bestType !== "forward" &&
+    result.bestType !== "flirty"
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RequestBody;
 
     const message = body.message?.trim() ?? "";
-    const vibe = body.vibe?.trim() ?? "Chill";
-    const goal = body.goal?.trim() ?? "Keep conversation going";
-    const mode = body.mode ?? "Conversation";
+    const vibe = body.vibe?.trim() || "Confident";
+    const goal = body.goal?.trim() || "Keep conversation going";
+    const mode = body.mode?.trim() || "Conversation";
     const image = body.image ?? null;
 
     if (!message && !image) {
       return NextResponse.json(
-        { error: "Please add a conversation or image first." },
+        {
+          error: "Please provide a conversation or image.",
+        },
         { status: 400 }
       );
-    }
-
-    const userPrompt = `
-MODE: ${mode}
-
-SELECTED VIBE: ${vibe}
-
-GOAL: ${goal}
-
-USER INPUT:
-${message || "(No text provided. Analyze the uploaded image.)"}
-
-Generate the RIZZORA response now.
-`;
-
-    const content: Array<
-      | {
-          type: "text";
-          text: string;
-        }
-      | {
-          type: "image_url";
-          image_url: {
-            url: string;
-          };
-        }
-    > = [
-      {
-        type: "text",
-        text: userPrompt,
-      },
-    ];
-
-    if (image) {
-      content.push({
-        type: "image_url",
-        image_url: {
-          url: image,
-        },
-      });
     }
 
     const apiKey = process.env.OPENROUTER_API_KEY;
@@ -212,6 +222,44 @@ Generate the RIZZORA response now.
       );
     }
 
+    const userContent: Array<
+      | {
+          type: "text";
+          text: string;
+        }
+      | {
+          type: "image_url";
+          image_url: {
+            url: string;
+          };
+        }
+    > = [];
+
+    userContent.push({
+      type: "text",
+      text: `
+MODE: ${mode}
+
+VIBE: ${vibe}
+
+GOAL: ${goal}
+
+CONVERSATION / USER INPUT:
+${message || "(No text provided. Analyze the image.)"}
+
+Analyze the context carefully and return the required JSON.
+      `.trim(),
+    });
+
+    if (image) {
+      userContent.push({
+        type: "image_url",
+        image_url: {
+          url: image,
+        },
+      });
+    }
+
     const openRouterResponse = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -223,7 +271,7 @@ Generate the RIZZORA response now.
           "X-Title": "RIZZORA",
         },
         body: JSON.stringify({
-          model: "google/gemma-4-31b-it:free",
+          model: "openrouter/free",
           temperature: 0.35,
           messages: [
             {
@@ -232,110 +280,112 @@ Generate the RIZZORA response now.
             },
             {
               role: "user",
-              content,
+              content: userContent,
             },
           ],
         }),
       }
     );
 
-    if (!openRouterResponse.ok) {
-      const errorText = await openRouterResponse.text();
+    const rawResponse = await openRouterResponse.text();
 
-      console.error("OpenRouter error:", errorText);
+    if (!openRouterResponse.ok) {
+      let details = rawResponse;
+
+      try {
+        const parsed = JSON.parse(rawResponse);
+        details = JSON.stringify(parsed);
+      } catch {
+        // Keep raw response.
+      }
+
+      console.error("OpenRouter error:", {
+        status: openRouterResponse.status,
+        details,
+      });
 
       return NextResponse.json(
         {
           error: "RIZZORA couldn't generate a reply right now.",
-          details: errorText,
+          details,
         },
         { status: 502 }
       );
     }
 
-    const data = await openRouterResponse.json();
-
-    const rawContent = data?.choices?.[0]?.message?.content;
-
-    if (!rawContent || typeof rawContent !== "string") {
-      console.error("Unexpected OpenRouter response:", data);
-
-      return NextResponse.json(
-        {
-          error: "RIZZORA received an empty response from the AI.",
-        },
-        { status: 502 }
-      );
-    }
-
-    let cleaned = rawContent.trim();
-
-    if (cleaned.startsWith("```")) {
-      cleaned = cleaned
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-    }
-
-    let result: GeneratedResult;
+    let openRouterData: {
+      choices?: Array<{
+        message?: {
+          content?: string;
+        };
+      }>;
+    };
 
     try {
-      result = JSON.parse(cleaned) as GeneratedResult;
-    } catch (error) {
-      console.error("JSON parse error:", error);
-      console.error("Raw model output:", rawContent);
-
+      openRouterData = JSON.parse(rawResponse);
+    } catch {
       return NextResponse.json(
         {
-          error: "RIZZORA received an invalid response from the AI.",
-          details: rawContent,
+          error: "OpenRouter returned invalid JSON.",
+          details: rawResponse,
         },
         { status: 502 }
       );
     }
 
-    const requiredFields = [
-      "situation",
-      "vibe",
-      "engagement",
-      "recommendedMove",
-      "banter",
-      "forward",
-      "flirty",
-      "bestMove",
-      "bestType",
-      "reason",
-    ];
+    const content = openRouterData.choices?.[0]?.message?.content;
 
-    const missingFields = requiredFields.filter(
-      (field) =>
-        !(field in result) ||
-        result[field as keyof GeneratedResult] === undefined ||
-        result[field as keyof GeneratedResult] === null
-    );
-
-    if (missingFields.length > 0) {
-      console.error("Missing response fields:", missingFields);
-      console.error("Parsed result:", result);
-
+    if (!content) {
       return NextResponse.json(
         {
-          error: "RIZZORA received an incomplete response from the AI.",
-          details: `Missing fields: ${missingFields.join(", ")}`,
+          error: "OpenRouter returned no AI response.",
+          details: rawResponse,
         },
         { status: 502 }
       );
     }
 
-    return NextResponse.json(result);
+    const cleaned = cleanJson(content);
+
+    let generated: unknown;
+
+    try {
+      generated = JSON.parse(cleaned);
+    } catch {
+      console.error("Invalid model JSON:", cleaned);
+
+      return NextResponse.json(
+        {
+          error: "RIZZORA received an invalid AI response.",
+          details: cleaned,
+        },
+        { status: 502 }
+      );
+    }
+
+    if (!validateResult(generated)) {
+      console.error("Invalid generated result:", generated);
+
+      return NextResponse.json(
+        {
+          error: "RIZZORA received an incomplete AI response.",
+          details: generated,
+        },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json(generated);
   } catch (error) {
     console.error("RIZZORA API error:", error);
 
     return NextResponse.json(
       {
-        error: "Something went wrong while generating your replies.",
+        error: "RIZZORA couldn't generate a reply right now.",
         details:
-          error instanceof Error ? error.message : "Unknown server error",
+          error instanceof Error
+            ? error.message
+            : "Unknown server error.",
       },
       { status: 500 }
     );
