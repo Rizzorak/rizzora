@@ -1,4 +1,4 @@
-```tsx
+
 export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-black px-6 py-16 text-white">
@@ -181,4 +181,3 @@ export default function PrivacyPage() {
     </main>
   );
 }
-```
