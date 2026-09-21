@@ -193,6 +193,11 @@ export default function Home() {
     setResult(null);
     setError("");
 
+    // Never carry an old conversation into Photo / Story mode.
+    if (type === "Photo / Story") {
+      setMessage("");
+    }
+
     if (type === "Conversation") {
       setImagePreview(null);
     }
@@ -201,6 +206,10 @@ export default function Home() {
   async function handleImage(file: File) {
     try {
       setError("");
+
+      // A newly uploaded image starts a fresh visual context.
+      setMessage("");
+      setResult(null);
 
       const resized = await resizeImage(file);
 
@@ -218,12 +227,17 @@ export default function Home() {
     if (!file) return;
 
     handleImage(file);
+
+    // Allows selecting the same image again after changing it.
+    event.target.value = "";
   }
 
   async function generateRizz() {
     if (loading) return;
 
-    if (!message.trim() && !imagePreview) {
+    const activeMessage = isPhoto ? "" : message;
+
+    if (!activeMessage.trim() && !imagePreview) {
       setError(
         isPhoto
           ? "Upload a photo or add some context first."
@@ -244,10 +258,16 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message,
+          // Photo mode intentionally sends an empty message.
+          // This prevents any previous conversation from reaching the AI.
+          message: activeMessage,
           vibe: selectedVibe,
           goal: selectedGoal,
-          uploadType,
+
+          // FIX:
+          // The API expects "mode", not "uploadType".
+          mode: isPhoto ? "photo" : "conversation",
+
           image: imagePreview,
         }),
       });
