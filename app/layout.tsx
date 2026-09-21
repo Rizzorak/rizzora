@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "RIZZORA — Your AI Wingman",
   description: "Your AI wingman when you don't know what to say.",
+  icons: {
+    apple: "/apple-touch-icon.png",
+    icon: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
